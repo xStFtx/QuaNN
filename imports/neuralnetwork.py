@@ -68,7 +68,7 @@ class NeuralNetwork:
                 a = self.elu(z)
             else:
                 raise ValueError("Unsupported activation function")
-            
+
             if training:
                 # Apply dropout regularization
                 dropout_mask = np.random.binomial(1, 0.8, size=a.shape) / 0.8
@@ -162,3 +162,13 @@ class NeuralNetwork:
         model.biases = biases
         
         return model
+
+    def summary(self):
+        print("Neural Network Summary:")
+        print("=======================")
+        print(f"Layers: {self.layers}")
+        print(f"Activation Function: {self.activation}")
+        print("Weight Shapes:")
+        for i in range(len(self.layers) - 1):
+            weight_shape = self.weights[i].shape
+            print(f"Layer {i+1}: {weight_shape}")
