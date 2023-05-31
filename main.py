@@ -15,8 +15,14 @@ def main():
     epochs = 10000
     nn.train(inputs, targets, learning_rate, epochs)
 
-    # Predict using the trained neural network
-    predictions = nn.predict(inputs)
+    # Save the trained model
+    nn.save_model("trained_model.npy")
+
+    # Load the trained model
+    loaded_model = NeuralNetwork.load_model("trained_model.npy")
+
+    # Predict using the loaded model
+    predictions = loaded_model.predict(inputs)
     print("Predictions:")
     print(predictions)
 
