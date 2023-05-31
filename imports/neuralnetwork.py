@@ -1,4 +1,6 @@
 import numpy as np
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
 
 class NeuralNetwork:
     def __init__(self, *layer_sizes, activation='quaternion_sigmoid'):
@@ -106,13 +108,35 @@ class NeuralNetwork:
             self.weights[i] -= learning_rate * weight_grads[i]
             self.biases[i] -= learning_rate * bias_grads[i]
 
-    def train(self, inputs, targets, learning_rate, epochs, l2_lambda=0, verbose=True):
+    def evaluate_model(self, inputs, targets):
+        """Evaluate the trained model on the given inputs and targets."""
+        activations, _ = self.forward_pass(inputs, training=False)
+        predictions = np.real(activations[-1]) > 0.5
+        targets = np.where(targets > 0, 1, 0)
+        accuracy = accuracy_score(targets, predictions)
+        return accuracy
+
+
+    def train(self, inputs, targets, test_inputs, test_targets, learning_rate, epochs, l2_lambda=0, verbose=True):
+        train_loss_history = []
+        test_loss_history = []
+        test_accuracy_history = []
+
         for epoch in range(epochs):
             self.backward_pass(inputs, targets, learning_rate, l2_lambda)
 
             if verbose and epoch % 100 == 0:
-                loss = self.loss(inputs, targets)
-                print(f"Epoch {epoch}: Loss = {loss}")
+                train_loss = self.loss(inputs, targets)
+                test_loss = self.loss(test_inputs, test_targets)
+                test_accuracy = self.evaluate_model(test_inputs, test_targets)
+                print(f"Epoch {epoch}: Train Loss = {train_loss}, Test Loss = {test_loss}, Test Accuracy = {test_accuracy}")
+
+                train_loss_history.append(train_loss)
+                test_loss_history.append(test_loss)
+                test_accuracy_history.append(test_accuracy)
+
+        return train_loss_history, test_loss_history, test_accuracy_history
+
 
     def predict(self, inputs):
         activations, _ = self.forward_pass(inputs, training=False)
@@ -162,14 +186,14 @@ class NeuralNetwork:
         elif self.activation == 'quaternion_relu':
             return np.where(x > 0, 1, 0)
         elif self.activation == 'quaternion_tanh':
-            return 1 - np.tanh(x)**2
+            return 1 - np.tanh(x) ** 2
         elif self.activation == 'quaternion_qrelu':
             return np.where(x > 0, 1, 0)
         elif self.activation == 'softmax':
-            return 1  # No derivative needed for softmax
+            return 1
         elif self.activation == 'leaky_relu':
             return np.where(x > 0, 1, 0.01)
         elif self.activation == 'elu':
-            return np.where(x > 0, 1, np.exp(x))
+            return np.where(x > 0, 1, self.elu(x) + 1)
         else:
             raise ValueError("Unsupported activation function")

@@ -1,5 +1,6 @@
 import numpy as np
-import sklearn.datasets as datasets
+from sklearn import datasets
+from sklearn.metrics import accuracy_score
 from imports.neuralnetwork import NeuralNetwork
 from imports.fourier import Fourier
 from imports.banach import BanachSpace
@@ -9,10 +10,18 @@ from imports.quaternion import Quaternion
 
 def train_neural_network():
     """Train a neural network on a classification dataset and save the trained model."""
-    # Example training data
-    dataset = datasets.make_classification(n_samples=100, n_features=2, n_informative=2, n_redundant=0, random_state=42)
-    inputs = dataset[0]
-    targets = dataset[1].reshape(-1, 1)
+    # Example training and test data
+    train_dataset = datasets.make_classification(n_samples=100, n_features=2, n_informative=2, n_redundant=0, random_state=42)
+    train_inputs = train_dataset[0]
+    train_targets = np.real(train_dataset[1]).reshape(-1, 1)  # Convert complex targets to real values
+
+    test_dataset = datasets.make_classification(n_samples=20, n_features=2, n_informative=2, n_redundant=0, random_state=42)
+    test_inputs = test_dataset[0]
+    test_targets = np.real(test_dataset[1]).reshape(-1, 1)  # Convert complex targets to real values
+
+    # Ensure binary targets
+    train_targets = np.where(train_targets > 0, 1, 0)
+    test_targets = np.where(test_targets > 0, 1, 0)
 
     # Create a neural network
     layers = [2, 4, 4, 4, 1]  # Updated number of layers
@@ -21,12 +30,14 @@ def train_neural_network():
     # Train the neural network
     learning_rate = 0.1
     epochs = 10000
-    nn.train(inputs, targets, learning_rate, epochs)
-
+    nn.train(train_inputs, train_targets, test_inputs, test_targets, learning_rate=learning_rate, epochs=epochs)
+    
+    # Evaluate the model on the test set
+    test_accuracy = nn.evaluate_model(test_inputs, test_targets)
+    
     # Save the trained model
     nn.save_model("trained_model.npy")
     print("Model training complete. Trained model saved as 'trained_model.npy'.")
-
 
 def load_pretrained_model():
     """Load a pre-trained model and make predictions using the loaded model."""
@@ -142,6 +153,8 @@ def apply_operations_to_qnn():
 
 def main():
     """Main function to interact with the program and select the desired operations."""
+    nn = None  # Variable to store the neural network object
+
     while True:
         print("\n1. Train the model")
         print("2. Load a pre-trained model")
@@ -153,15 +166,22 @@ def main():
 
         if choice == '1':
             train_neural_network()
+            nn = NeuralNetwork.load_model("trained_model.npy")
+            print("Pre-trained model loaded successfully.")
 
         elif choice == '2':
             load_pretrained_model()
+            nn = NeuralNetwork.load_model("trained_model.npy")
+            print("Pre-trained model loaded successfully.")
 
         elif choice == '3':
             perform_fourier_and_banach_operations()
 
         elif choice == '4':
-            apply_operations_to_qnn()
+            if nn is None:
+                print("Please train or load a pre-trained model first.")
+            else:
+                apply_operations_to_qnn()
 
         elif choice == '5':
             print("Exiting the program...")
@@ -169,6 +189,7 @@ def main():
 
         else:
             print("Invalid choice. Please enter a valid option.")
+
 
 
 if __name__ == '__main__':
