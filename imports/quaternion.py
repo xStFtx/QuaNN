@@ -50,15 +50,3 @@ class Quaternion:
         else:
             raise ZeroDivisionError("Quaternion has zero norm")
 
-# Example usage
-q1 = Quaternion(1.0, 2.0, 3.0, 4.0)
-q2 = Quaternion(0.5, -1.0, 2.0, -2.5)
-
-print("q1 =", q1)
-print("q2 =", q2)
-print("q1 + q2 =", q1 + q2)
-print("q1 - q2 =", q1 - q2)
-print("q1 * q2 =", q1 * q2)
-print("|q1| =", q1.norm())
-print("q1 normalized =", q1.normalize())
-print("q1 inverse =", q1.inverse())

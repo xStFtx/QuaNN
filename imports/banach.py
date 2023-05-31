@@ -31,19 +31,3 @@ class BanachSpace:
     def __str__(self):
         return str(self.elements)
     
-# Create two BanachSpace instances
-A = BanachSpace([1, 2, 3])
-B = BanachSpace([4, 5, 6])
-
-# Perform operations on the instances
-norm_A = A.norm()
-scaled_A = A.scalar_multiply(2)
-sum_AB = A.add(B)
-dot_AB = A.dot_product(B)
-
-# Print the results
-print("A: ", A)
-print("Norm of A: ", norm_A)
-print("Scaled A: ", scaled_A)
-print("Sum of A and B: ", sum_AB)
-print("Dot product of A and B: ", dot_AB)

@@ -1,16 +1,25 @@
 import numpy as np
 
 class NeuralNetwork:
-    def __init__(self, layers, activation='quaternion_sigmoid'):
-        self.layers = layers
+    def __init__(self, *layer_sizes, activation='quaternion_sigmoid'):
+        self.layers = layer_sizes
         self.weights = []
         self.biases = []
         self.activation = activation
+        self.activation_functions = {
+            'quaternion_sigmoid': self.quaternion_sigmoid,
+            'quaternion_relu': self.quaternion_relu,
+            'quaternion_tanh': self.quaternion_tanh,
+            'quaternion_qrelu': self.quaternion_qrelu,
+            'softmax': self.softmax,
+            'leaky_relu': self.leaky_relu,
+            'elu': self.elu
+        }
 
-        for i in range(1, len(layers)):
-            weight_shape = (layers[i-1], layers[i])
+        for i in range(1, len(layer_sizes)):
+            weight_shape = (layer_sizes[i-1], layer_sizes[i])
             self.weights.append(self.quaternion_weight_init(weight_shape))
-            self.biases.append(np.zeros((1, layers[i]), dtype=np.complex128))
+            self.biases.append(np.zeros((1, layer_sizes[i]), dtype=np.complex128))
 
     def quaternion_sigmoid(self, x):
         return 1 / (1 + np.exp(-x))
@@ -52,22 +61,8 @@ class NeuralNetwork:
 
         for i in range(len(self.layers) - 1):
             z = activations[-1] @ self.weights[i] + self.biases[i]
-            if self.activation == 'quaternion_sigmoid':
-                a = self.quaternion_sigmoid(z)
-            elif self.activation == 'quaternion_relu':
-                a = self.quaternion_relu(z)
-            elif self.activation == 'quaternion_tanh':
-                a = self.quaternion_tanh(z)
-            elif self.activation == 'quaternion_qrelu':
-                a = self.quaternion_qrelu(z)
-            elif self.activation == 'softmax':
-                a = self.softmax(z)
-            elif self.activation == 'leaky_relu':
-                a = self.leaky_relu(z)
-            elif self.activation == 'elu':
-                a = self.elu(z)
-            else:
-                raise ValueError("Unsupported activation function")
+            activation_function = self.activation_functions[self.activation]
+            a = activation_function(z)
 
             if training:
                 # Apply dropout regularization
@@ -87,22 +82,9 @@ class NeuralNetwork:
         output = activations[-1]
         num_samples = inputs.shape[0]
 
-        if self.activation == 'quaternion_sigmoid':
-            delta = (output - targets) * output * (1 - output)
-        elif self.activation == 'quaternion_relu':
-            delta = (output - targets) * (output > 0)
-        elif self.activation == 'quaternion_tanh':
-            delta = (output - targets) * (1 - output ** 2)
-        elif self.activation == 'quaternion_qrelu':
-            delta = (output - targets) * (output > 0)
-        elif self.activation == 'softmax':
-            delta = output - targets
-        elif self.activation == 'leaky_relu':
-            delta = (output - targets) * np.where(output > 0, 1, 0.01)
-        elif self.activation == 'elu':
-            delta = (output - targets) * np.where(output > 0, 1, output + 1)
-        else:
-            raise ValueError("Unsupported activation function")
+        activation_derivative = self.activation_derivative(output)
+
+        delta = (output - targets) * activation_derivative
 
         weight_grads = []
         bias_grads = []
@@ -118,7 +100,7 @@ class NeuralNetwork:
             weight_grads.insert(0, weight_grad)
             bias_grads.insert(0, bias_grad)
 
-            delta_next = (delta_next @ self.weights[i].T) * (activations[i] > 0) * dropout_masks[i][:, :activations[i].shape[1]]
+            delta_next = (delta_next @ self.weights[i].T) * self.activation_derivative(activations[i]) * dropout_masks[i][:, :activations[i].shape[1]]
 
         for i in range(len(self.weights)):
             self.weights[i] -= learning_rate * weight_grads[i]
@@ -155,13 +137,14 @@ class NeuralNetwork:
         layers = model_data['layers']
         weights = model_data['weights']
         biases = model_data['biases']
-        activation = model_data['activation']
-        
-        model = cls(layers, activation)
+        activation = str(model_data['activation'])  # Convert activation to string
+
+        model = cls(*layers, activation=activation)  # Pass activation as string
         model.weights = weights
         model.biases = biases
-        
+
         return model
+
 
     def summary(self):
         print("Neural Network Summary:")
@@ -172,3 +155,21 @@ class NeuralNetwork:
         for i in range(len(self.layers) - 1):
             weight_shape = self.weights[i].shape
             print(f"Layer {i+1}: {weight_shape}")
+
+    def activation_derivative(self, x):
+        if self.activation == 'quaternion_sigmoid':
+            return self.quaternion_sigmoid(x) * (1 - self.quaternion_sigmoid(x))
+        elif self.activation == 'quaternion_relu':
+            return np.where(x > 0, 1, 0)
+        elif self.activation == 'quaternion_tanh':
+            return 1 - np.tanh(x)**2
+        elif self.activation == 'quaternion_qrelu':
+            return np.where(x > 0, 1, 0)
+        elif self.activation == 'softmax':
+            return 1  # No derivative needed for softmax
+        elif self.activation == 'leaky_relu':
+            return np.where(x > 0, 1, 0.01)
+        elif self.activation == 'elu':
+            return np.where(x > 0, 1, np.exp(x))
+        else:
+            raise ValueError("Unsupported activation function")
